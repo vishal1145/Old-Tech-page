@@ -45,13 +45,27 @@ def diagnose():
             url = 'https://' + url
         
         # Run diagnosis
-        result = diagnose_site(url)
+        try:
+            result = diagnose_site(url)
+        except Exception as e:
+            # Log the error for debugging
+            import traceback
+            error_trace = traceback.format_exc()
+            print(f"Diagnosis error: {error_trace}")
+            return jsonify({
+                'error': f'Diagnosis failed: {str(e)}',
+                'details': error_trace if os.environ.get('FLASK_DEBUG') else None
+            }), 500
         
         # Generate technical observation if vulnerabilities detected
         if result.get("vulnerability_detected", False):
-            observation = generate_technical_observation(result)
-            if observation:
-                result["technical_observation"] = observation
+            try:
+                observation = generate_technical_observation(result)
+                if observation:
+                    result["technical_observation"] = observation
+            except Exception as e:
+                # Don't fail if observation generation fails
+                print(f"Observation generation failed: {str(e)}")
         
         # Save to file with URL-based name
         filename = get_safe_filename(url)
@@ -60,8 +74,12 @@ def diagnose():
         # Create results directory if it doesn't exist
         os.makedirs('results', exist_ok=True)
         
-        with open(filepath, 'w') as f:
-            json.dump(result, f, indent=2)
+        try:
+            with open(filepath, 'w') as f:
+                json.dump(result, f, indent=2)
+        except Exception as e:
+            print(f"Failed to save result: {str(e)}")
+            # Continue even if save fails
         
         result['output_file'] = filename
         result['output_path'] = filepath
@@ -69,7 +87,13 @@ def diagnose():
         return jsonify(result)
     
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Request error: {error_trace}")
+        return jsonify({
+            'error': str(e),
+            'details': error_trace if os.environ.get('FLASK_DEBUG') else None
+        }), 500
 
 
 @app.route('/results', methods=['GET'])
