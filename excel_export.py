@@ -44,7 +44,7 @@ def format_excel_worksheet(worksheet, title="Website Diagnosis Results"):
     for row in worksheet.iter_rows(min_row=2, max_row=worksheet.max_row):
         for cell in row:
             cell.border = border_style
-            if cell.column_letter in ['A', 'B', 'C', 'D', 'E']:  # Text columns
+            if cell.column_letter in ['A', 'B', 'C', 'D', 'E', 'H', 'J', 'K', 'L', 'M']:  # Text columns
                 cell.alignment = wrap_alignment
             else:
                 cell.alignment = center_alignment
@@ -204,7 +204,8 @@ def export_bulk_results_to_excel(results_list, output_path=None):
                 'FCP (ms)': result.get('first_contentful_paint_ms', 'N/A'),
                 'Console Errors': result.get('console_error_count', 0),
                 'Vulnerabilities': len(result.get('vulnerabilities', [])),
-                'Vulnerability Detected': 'Yes' if result.get('vulnerability_detected', False) else 'No'
+                'Vulnerability Detected': 'Yes' if result.get('vulnerability_detected', False) else 'No',
+                'Technical Observation': result.get('technical_observation', 'N/A')
             })
         
         summary_df = pd.DataFrame(summary_data)

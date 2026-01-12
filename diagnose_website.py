@@ -18,109 +18,91 @@ except ImportError:
 # Vulnerable patterns to check for in the source code
 # These patterns check for vulnerable versions in script tags, URLs, and source code
 VULNERABLE_PATTERNS = {
-    # AngularJS 1.x (all versions < 1.7 are vulnerable)
-    # Pattern matches: angularjs/1.3.5/angular.min.js OR angular.js?version=1.3.5 OR angular.min.js@1.3.5
-    "angularjs_v1_5": r"angularjs/1\.5|angular(\.min)?\.js[^/]*1\.5",
-    "angularjs_v1_4": r"angularjs/1\.4|angular(\.min)?\.js[^/]*1\.4",
-    "angularjs_v1_3": r"angularjs/1\.3|angular(\.min)?\.js[^/]*1\.3",
-    "angularjs_v1_2": r"angularjs/1\.2|angular(\.min)?\.js[^/]*1\.2",
-    "angularjs_v1_1": r"angularjs/1\.1|angular(\.min)?\.js[^/]*1\.1",
-    "angularjs_v1_0": r"angularjs/1\.0|angular(\.min)?\.js[^/]*1\.0",
-    "angularjs_old": r"angularjs/1\.[0-6]|angular(\.min)?\.js[^/]*1\.[0-6]",  # Catch any 1.0-1.6
+    # Next.js < 13
+    "nextjs_old": r"(?:_next/static/|next\.js[^/]*?@?)(1\.[0-9]\.|^1[0-2]\.)",
     
-    # jQuery < 1.12 (vulnerable versions)
-    # Pattern matches: jquery/1.11/jquery.min.js OR jquery.min.js?ver=1.11
-    "jquery_old": r"jquery[^/]*1\.([0-9]|1[0-1])(\.[0-9]+)?|jquery/1\.([0-9]|1[0-1])(\.[0-9]+)?/jquery",
+    # AngularJS 1.x
+    "angularjs_v1_5": r"angular(?:js)?(?:-|\.min)?\.js\?v?=1\.5",
+    "angularjs_v1_4": r"angular(?:js)?(?:-|\.min)?\.js\?v?=1\.4",
+    "angularjs_v1_3": r"angular(?:js)?(?:-|\.min)?\.js\?v?=1\.3",
+    "angularjs_v1_2": r"angular(?:js)?(?:-|\.min)?\.js\?v?=1\.2",
+    "angularjs_v1_1": r"angular(?:js)?(?:-|\.min)?\.js\?v?=1\.1",
+    "angularjs_v1_0": r"angular(?:js)?(?:-|\.min)?\.js\?v?=1\.0",
+    "angularjs_old": r"angular(?:js)?(?:-|\.min)?\.js\?v?=1\.[0-6]",
+    
+    # jQuery < 1.12
+    # Strict match for jquery file pattern, not just 'jquery' word
+    "jquery_old": r"jquery[.-](?:1\.([0-9]|1[0-1]))(?:\.|\b)",
     
     # Bootstrap < 3.5
-    "bootstrap_old": r"bootstrap[^/]*3\.[0-4]",
+    "bootstrap_old": r"bootstrap(?:-|\.min)?\.(?:js|css)[^/]*?3\.[0-4]",
     
-    # React < 16.8 (older versions with vulnerabilities)
-    "react_old": r"react[^/]*(0\.|1[0-5]\.)|react/(0\.|1[0-5]\.)",
+    # React < 16.8
+    "react_old": r"react(?:-dom)?(?:-|\.min)?\.js[^/]*?(?:0\.|1[0-5]\.|16\.[0-7]\b)",
     
-    # Vue.js < 2.6 (older versions)
-    "vue_old": r"vue[^/]*(0\.|1\.|2\.[0-5])|vue\.js[^/]*(0\.|1\.|2\.[0-5])",
+    # Vue.js < 2.6
+    "vue_old": r"vue(?:-|\.min)?\.js[^/]*?(?:0\.|1\.|2\.[0-5])",
     
     # Backbone.js < 1.4
-    "backbone_old": r"backbone[^/]*(0\.|1\.[0-3])|backbone\.js[^/]*(0\.|1\.[0-3])",
+    "backbone_old": r"backbone(?:-|\.min)?\.js[^/]*?(?:0\.|1\.[0-3])",
     
     # Ember.js < 2.18
-    "ember_old": r"ember[^/]*(0\.|1\.|2\.[0-1][0-7])|ember\.js[^/]*(0\.|1\.|2\.[0-1][0-7])",
+    # Strict boundary to avoid 'emberSupport' etc
+    "ember_old": r"\bember(?:-|\.min)?\.js[^/]*?(?:0\.|1\.|2\.[0-1][0-7])",
     
     # Knockout.js < 3.5
-    "knockout_old": r"knockout[^/]*(0\.|1\.|2\.|3\.[0-4])|knockout\.js[^/]*(0\.|1\.|2\.|3\.[0-4])",
+    "knockout_old": r"knockout(?:-|\.min)?\.js[^/]*?(?:0\.|1\.|2\.|3\.[0-4])",
     
     # Dojo Toolkit < 1.14
-    "dojo_old": r"dojo[^/]*(0\.|1\.[0-1][0-3])|dojo\.js[^/]*(0\.|1\.[0-1][0-3])",
+    "dojo_old": r"dojo(?:-|\.min)?\.js[^/]*?(?:0\.|1\.[0-1][0-3])",
     
     # Prototype.js < 1.7.3
-    "prototype_old": r"prototype[^/]*(0\.|1\.[0-6]\.|1\.7\.[0-2])|prototype\.js[^/]*(0\.|1\.[0-6]\.|1\.7\.[0-2])",
+    "prototype_old": r"prototype(?:-|\.min)?\.js[^/]*?(?:0\.|1\.[0-6]\.|1\.7\.[0-2])",
     
     # MooTools < 1.6
-    "mootools_old": r"mootools[^/]*(0\.|1\.[0-5])|mootools\.js[^/]*(0\.|1\.[0-5])",
+    "mootools_old": r"mootools(?:-|\.min)?\.js[^/]*?(?:0\.|1\.[0-5])",
     
-    # YUI (Yahoo UI) < 3.18
-    "yui_old": r"yui[^/]*(0\.|1\.|2\.|3\.[0-1][0-7])|yui\.js[^/]*(0\.|1\.|2\.|3\.[0-1][0-7])",
+    # YUI < 3.18
+    "yui_old": r"yui(?:-|\.min)?\.js[^/]*?(?:0\.|1\.|2\.|3\.[0-1][0-7])",
     
     # ExtJS < 6.2
-    "extjs_old": r"extjs[^/]*(0\.|1\.|2\.|3\.|4\.|5\.|6\.[0-1])|ext\.js[^/]*(0\.|1\.|2\.|3\.|4\.|5\.|6\.[0-1])",
+    "extjs_old": r"ext(?:-|\.min)?\.js[^/]*?(?:0\.|1\.|2\.|3\.|4\.|5\.|6\.[0-1])",
     
     # Underscore.js < 1.9
-    "underscore_old": r"underscore[^/]*(0\.|1\.[0-8])|underscore\.js[^/]*(0\.|1\.[0-8])",
+    "underscore_old": r"underscore(?:-|\.min)?\.js[^/]*?(?:0\.|1\.[0-8])",
     
     # Lodash < 4.17
-    "lodash_old": r"lodash[^/]*(0\.|1\.|2\.|3\.|4\.[0-1][0-6])|lodash\.js[^/]*(0\.|1\.|2\.|3\.|4\.[0-1][0-6])",
-    
-    # Moment.js (deprecated, all versions)
-    "moment_deprecated": r"moment[^/]*\.js|moment/",
+    "lodash_old": r"lodash(?:-|\.min)?\.js[^/]*?(?:0\.|1\.|2\.|3\.|4\.[0-1][0-6])",
     
     # jQuery UI < 1.12
-    "jquery_ui_old": r"jquery-ui[^/]*(0\.|1\.[0-1][0-1])|jqueryui[^/]*(0\.|1\.[0-1][0-1])",
+    "jquery_ui_old": r"jquery-ui(?:-|\.min)?\.js[^/]*?(?:0\.|1\.[0-1][0-1])",
     
-    # WordPress (detect in meta tags, comments, or wp-content)
-    "wordpress_old": r"wp-content|wordpress|wp-includes|wp-admin",
+    # WordPress - look for generator tag or explicit wp-includes path with version
+    "wordpress_old": r"wp-includes/.*?ver=(?:[0-4]\.|5\.[0-9]\.|6\.[0-1]\.)",
     
-    # Drupal < 8 (detect in meta tags or drupal.js)
-    "drupal_old": r"drupal[^/]*(0\.|6\.|7\.)|drupal\.js",
+    # Drupal < 8
+    "drupal_old": r"drupal\.js.*?v?(?:[0-7]\.)",
     
     # Joomla < 3.9
-    "joomla_old": r"joomla[^/]*(0\.|1\.|2\.|3\.[0-8])",
-    
-    # ASP.NET (old versions in headers/comments)
-    "aspnet_old": r"asp\.net|aspx|webforms|viewstate",
-    
-    # PHP (detect version in headers or comments)
-    "php_old": r"php/[0-7]\.[0-9]|x-powered-by.*php/[0-7]\.[0-9]",
-    
-    # Ruby on Rails < 5.2
-    "rails_old": r"rails[^/]*(0\.|1\.|2\.|3\.|4\.|5\.[0-1])|ruby.*on.*rails",
-    
-    # Django < 2.2
-    "django_old": r"django[^/]*(0\.|1\.[0-1][0-1]|2\.[0-1])",
+    "joomla_old": r"joomla.*?v?(?:[0-2]\.|3\.[0-8])",
     
     # Handlebars < 4.0
-    "handlebars_old": r"handlebars[^/]*(0\.|1\.|2\.|3\.)|handlebars\.js[^/]*(0\.|1\.|2\.|3\.)",
+    "handlebars_old": r"handlebars(?:-|\.min)?\.js[^/]*?(?:0\.|1\.|2\.|3\.)",
     
     # Mustache.js < 3.0
-    "mustache_old": r"mustache[^/]*(0\.|1\.|2\.)|mustache\.js[^/]*(0\.|1\.|2\.)",
+    "mustache_old": r"mustache(?:-|\.min)?\.js[^/]*?(?:0\.|1\.|2\.)",
     
     # Marionette.js < 4.0
-    "marionette_old": r"marionette[^/]*(0\.|1\.|2\.|3\.)|marionette\.js[^/]*(0\.|1\.|2\.|3\.)",
+    "marionette_old": r"marionette(?:-|\.min)?\.js[^/]*?(?:0\.|1\.|2\.|3\.)",
     
     # RequireJS < 2.3
-    "requirejs_old": r"requirejs[^/]*(0\.|1\.|2\.[0-2])|require\.js[^/]*(0\.|1\.|2\.[0-2])",
+    "requirejs_old": r"require(?:-|\.min)?\.js[^/]*?(?:0\.|1\.|2\.[0-2])",
     
     # Socket.io < 2.0
-    "socketio_old": r"socket\.io[^/]*(0\.|1\.)|socketio[^/]*(0\.|1\.)",
-    
-    # Express.js (detect in comments/headers, < 4.17)
-    "express_old": r"express[^/]*(0\.|1\.|2\.|3\.|4\.[0-1][0-6])",
-    
-    # Font Awesome < 5.0
-    "fontawesome_old": r"font-awesome[^/]*(0\.|1\.|2\.|3\.|4\.)|fontawesome[^/]*(0\.|1\.|2\.|3\.|4\.)",
+    "socketio_old": r"socket\.io(?:-|\.min)?\.js[^/]*?(?:0\.|1\.)",
     
     # Modernizr < 3.0
-    "modernizr_old": r"modernizr[^/]*(0\.|1\.|2\.)|modernizr\.js[^/]*(0\.|1\.|2\.)",
+    "modernizr_old": r"modernizr(?:-|\.min)?\.js[^/]*?(?:0\.|1\.|2\.)",
 }
 
 
@@ -159,7 +141,7 @@ TECH_DETECTION_PATTERNS = {
     "lodash": r"lodash(?:\.min)?\.js",
     "moment": r"moment(?:\.min)?\.js",
     "jquery_ui": r"jquery-ui|jqueryui",
-    "bootstrap": r"bootstrap(?:\.min)?\.(js|css)",
+    "bootstrap": r"bootstrap(?:\.min)?\.(?:js|css)",
     "wordpress": r"wp-content|wp-includes|wp-admin|wordpress",
     "drupal": r"drupal\.js|sites/default",
     "joomla": r"joomla|components/com_",
@@ -167,11 +149,11 @@ TECH_DETECTION_PATTERNS = {
     "shopify": r"cdn\.shopify|shopify",
     "woocommerce": r"woocommerce",
     "aspnet": r"asp\.net|aspx|viewstate|__doPostBack",
-    "php": r"\.php\?|php/|x-powered-by.*php",
-    "rails": r"rails|ruby.*on.*rails|\.rb",
-    "django": r"django|csrfmiddlewaretoken",
+    "php": r"\.php\?|x-powered-by.*php",
+    "rails": r"ruby.*on.*rails",  # Removed loose "rails"
+    "django": r"csrfmiddlewaretoken", # Removed loose "django"
     "laravel": r"laravel|_token",
-    "express": r"express|express\.js",
+    "express": r"express\.js", # Removed loose "express"
     "socketio": r"socket\.io",
     "handlebars": r"handlebars(?:\.min)?\.js",
     "mustache": r"mustache(?:\.min)?\.js",
@@ -182,22 +164,259 @@ TECH_DETECTION_PATTERNS = {
 }
 
 
-def detect_technologies(html_content):
-    """Detect technologies from HTML content."""
+
+def detect_technologies_via_browser(page):
+    """
+    Detect technologies by injecting JavaScript into the page
+    to check global variables and DOM attributes.
+    This is much more accurate for version detection.
+    """
+    return page.evaluate("""() => {
+        const techs = [];
+        const seen = new Set();
+        
+        // Helper to add tech
+        const add = (name, version, confidence='high') => {
+            const key = name + ':' + (version || '');
+            if (!seen.has(key)) {
+                techs.push({name, version: version || null, confidence});
+                seen.add(key);
+            }
+        };
+        
+        try {
+            // jQuery
+            if (window.jQuery && window.jQuery.fn && window.jQuery.fn.jquery) {
+                add('jquery', window.jQuery.fn.jquery);
+            }
+            
+            // AngularJS
+            if (window.angular && window.angular.version) {
+                 add('angularjs', window.angular.version.full);
+            }
+            
+            // React Improved Detection
+            // 1. Check for React Fiber keys
+            let foundReact = false;
+            
+            const isReactElement = (el) => {
+                 if (!el) return false;
+                 return Object.keys(el).some(key => 
+                    key.startsWith('__reactFiber') || 
+                    key.startsWith('__reactInternalInstance') || 
+                    key.startsWith('__reactContainer') ||
+                    key.startsWith('_reactRootContainer')
+                 );
+            };
+            
+            if (isReactElement(document.body)) foundReact = true;
+            if (!foundReact) {
+                for (const child of document.body.children) {
+                    if (isReactElement(child)) { foundReact = true; break; }
+                }
+            }
+            if (!foundReact) {
+                const roots = ['root', 'app', '__next', 'main'];
+                for (const id of roots) {
+                    const el = document.getElementById(id);
+                    if (isReactElement(el)) { foundReact = true; break; }
+                }
+            }
+
+            // Try to get React Version from DevTools Hook (works in many production apps)
+            let reactVersion = null;
+            if (window.__REACT_DEVTOOLS_GLOBAL_HOOK__ && window.__REACT_DEVTOOLS_GLOBAL_HOOK__.renderers) {
+                try {
+                    const renderers = window.__REACT_DEVTOOLS_GLOBAL_HOOK__.renderers;
+                    // renderers is a Map or Object
+                    if (renderers instanceof Map) {
+                        for (const r of renderers.values()) {
+                            if (r.version) { reactVersion = r.version; break; }
+                        }
+                    } else if (typeof renderers === 'object') {
+                        for (const key in renderers) {
+                            if (renderers[key] && renderers[key].version) {
+                                reactVersion = renderers[key].version;
+                                break;
+                            }
+                        }
+                    }
+                } catch(e) {}
+            }
+
+            if (reactVersion) {
+                add('react', reactVersion, 'high');
+            } else if (foundReact) {
+                add('react', null, 'high');
+            } else if (window.React && window.React.version) {
+                add('react', window.React.version, 'high');
+            } else if (document.querySelector('[data-reactroot], [data-reactid]')) {
+                add('react', null, 'high');
+            } else if (window.__NEXT_DATA__ || window.__NUXT__ || window.next) {
+                 if (window.__NEXT_DATA__ || window.next) add('react', null, 'high');
+            }
+            
+            // Next.js
+            if (window.__NEXT_DATA__) {
+                add('nextjs', null, 'high'); 
+            }
+            else if (window.next && window.next.version) {
+                 add('nextjs', window.next.version, 'high');
+            }
+            
+            // Nuxt.js
+            if (window.__NUXT__) {
+                add('nuxt', null, 'high');
+            }
+            
+            // Bootstrap
+            // Check for JS object - Downgraded to medium confidence to let Frameworks win
+            if (window.bootstrap && window.bootstrap.Tooltip && window.bootstrap.Tooltip.VERSION) {
+                add('bootstrap', window.bootstrap.Tooltip.VERSION, 'medium');
+            }
+            
+            // Lodash / Underscore
+            if (window._ && window._.VERSION) {
+                if (window._.templateSettings) {
+                    add('underscore', window._.VERSION, 'medium');
+                } else {
+                    add('lodash', window._.VERSION, 'medium');
+                }
+            }
+            
+            // Moment.js
+            if (window.moment && window.moment.version) {
+                add('moment', window.moment.version, 'medium');
+            }
+            
+            // Socket.io
+            if (window.io && window.io.version) {
+                add('socketio', window.io.version, 'medium');
+            }
+            
+            // Meta Generator Tags (WordPress, Drupal, Joomla, etc.)
+            const metas = document.querySelectorAll('meta[name="generator"]');
+            metas.forEach(meta => {
+                const content = meta.content.toLowerCase();
+                if (content.includes('wordpress')) {
+                    const match = content.match(/wordpress\s+(\d+\.\d+(?:\.\d+)?)/);
+                    add('wordpress', match ? match[1] : null, 'high');
+                }
+                if (content.includes('drupal')) add('drupal', null, 'high');
+                if (content.includes('joomla')) add('joomla', null, 'high');
+                if (content.includes('shopify')) add('shopify', null, 'high');
+                if (content.includes('magento')) add('magento', null, 'high');
+                if (content.includes('wix')) add('wix', null, 'high');
+                if (content.includes('squarespace')) add('squarespace', null, 'high');
+            });
+            
+            // Script SRC scanning
+            // Look for patterns like /jquery-3.6.0.min.js
+            const scripts = document.querySelectorAll('script[src]');
+            scripts.forEach(script => {
+                const src = script.src;
+                // Regex to capture filename and version
+                // Matches: jquery-3.6.0.min.js, app.v1.2.3.js, etc.
+                const match = src.match(/([a-zA-Z0-9-]+)[.-](\d+\.\d+(?:\.\d+)?)/);
+                if (match) {
+                    let name = match[1].toLowerCase();
+                    const version = match[2];
+                    
+                    // Normalize common library names from filenames
+                    if (name.includes('jquery') && !name.includes('ui')) name = 'jquery';
+                    else if (name.includes('bootstrap')) name = 'bootstrap';
+                    else if (name.includes('vue')) name = 'vue';
+                    else if (name.includes('react')) name = 'react';
+                    else if (name.includes('angular')) name = 'angular';
+                    
+                    if (['jquery', 'bootstrap', 'vue', 'react', 'angular', 'angularjs', 'moment', 'lodash', 'underscore', 'backbone', 'knockout'].includes(name)) {
+                        add(name, version, 'medium');
+                    }
+                }
+            });
+
+        } catch (e) {
+            // console.log('Tech detection error', e);
+        }
+        
+        return techs;
+    }""")
+
+
+def detect_technologies_static(html_content):
+    """
+    Detect technologies from HTML content using regex.
+    Improved to look for versions in context rather than globally.
+    """
     html_lower = html_content.lower()
     detected_techs = []
     
     for tech_name, pattern in TECH_DETECTION_PATTERNS.items():
-        if re.search(pattern, html_lower, re.IGNORECASE):
-            # Try to extract version
-            version_match = re.search(r'(\d+\.\d+(?:\.\d+)?)', html_lower)
-            version = version_match.group(1) if version_match else None
+        # Find all matches of the tech pattern
+        for match in re.finditer(pattern, html_lower, re.IGNORECASE):
+            # Extract a window of text around the match to look for a version number
+            # Look ahead ~30 chars and behind ~10 chars
+            start_pos = match.start()
+            end_pos = min(len(html_lower), match.end() + 30)
+            
+            context = html_lower[start_pos:end_pos]
+            
+            # Look for version pattern like "1.2.3" or "v1.2" inside this context
+            # We want to be reasonably close to the tech name
+            version_match = re.search(r'[v\s\/-](\d+\.\d+(?:\.\d+)?)', context)
+            
+            version = None
+            if version_match:
+                version = version_match.group(1)
+            
+            # If we found it, add it
             detected_techs.append({
                 "name": tech_name,
-                "version": version
+                "version": version,
+                "confidence": "low"  # Static analysis is always lower confidence than runtime
             })
+            
+            if version:
+                break # If we found a versioned instance, likely good enough for this tech
     
     return detected_techs
+
+
+def merge_detected_techs(browser_techs, static_techs):
+    """
+    Merge technologies detected from browser (high confidence) 
+    and static analysis (low confidence).
+    """
+    merged = {}
+    
+    # Process browser techs first (higher priority)
+    for tech in browser_techs:
+        name = tech['name']
+        version = tech['version']
+        
+        if name not in merged:
+            merged[name] = version
+        elif version and not merged[name]:
+            # Upgrade to versioned if we only had unversioned
+            merged[name] = version
+            
+    # Process static techs (fallback)
+    for tech in static_techs:
+        name = tech['name']
+        version = tech['version']
+        
+        if name not in merged:
+            merged[name] = version
+        elif version and not merged[name]:
+            # Upgrade to versioned if we only had unversioned
+            merged[name] = version
+            
+    # Convert back to list format
+    result = []
+    for name, version in merged.items():
+        result.append({"name": name, "version": version})
+        
+    return result
 
 
 def format_tech_name(vulnerabilities, detected_techs=None):
@@ -246,7 +465,43 @@ def format_tech_name(vulnerabilities, detected_techs=None):
         "modernizr": "Modernizr",
     }
     
-    # First, try to get tech from vulnerabilities
+    # Priority 1: Use detected technologies
+    if detected_techs:
+        # Prioritize frameworks over libraries but showing multiple is good
+        priority_order = ["nextjs", "nuxt", "react", "vue", "angular", "angularjs", "svelte", 
+                        "wordpress", "drupal", "joomla", "magento", "shopify", "rails", 
+                        "django", "laravel", "aspnet", "php", "express", "ember", "backbone", 
+                        "bootstrap", "jquery"] # added bootstrap/jquery to end of priority list to still show if relevant
+        
+        # Sort detected techs by confidence (high first), then by priority
+        def get_sort_key(t):
+            conf_score = 3 if t.get('confidence') == 'high' else (2 if t.get('confidence') == 'medium' else 1)
+            priority_score = 0
+            if t['name'] in priority_order:
+                priority_score = len(priority_order) - priority_order.index(t['name'])
+            return (conf_score, priority_score)
+            
+        sorted_techs = sorted(detected_techs, key=get_sort_key, reverse=True)
+        
+        # Collect top technologies (up to 3 distinct frameworks/libs)
+        formatted_names = []
+        for tech in sorted_techs:
+            # Skip if we already have 3
+            if len(formatted_names) >= 3:
+                break
+                
+            name = tech_map.get(tech["name"], tech["name"].title())
+            if tech["version"]:
+                name = f"{name} {tech['version']}"
+            
+            # Avoid duplicates (e.g. React and React 16)
+            if not any(name.split()[0] in curr for curr in formatted_names):
+                formatted_names.append(name)
+        
+        if formatted_names:
+            return ", ".join(formatted_names)
+            
+    # Priority 2: Use vulnerabilities as fallback
     if vulnerabilities:
         first_vuln = vulnerabilities[0]
         tech_type = first_vuln.get("type", "")
@@ -261,28 +516,6 @@ def format_tech_name(vulnerabilities, detected_techs=None):
         if version != "unknown":
             tech_name = f"{tech_name} {version}"
         
-        return tech_name
-    
-    # If no vulnerabilities, use detected technologies
-    if detected_techs:
-        # Prioritize frameworks over libraries
-        priority_order = ["react", "vue", "angular", "angularjs", "nextjs", "nuxt", "svelte", 
-                        "wordpress", "drupal", "joomla", "magento", "shopify", "rails", 
-                        "django", "laravel", "aspnet", "php", "express"]
-        
-        for priority_tech in priority_order:
-            for tech in detected_techs:
-                if tech["name"] == priority_tech:
-                    tech_name = tech_map.get(priority_tech, priority_tech.title())
-                    if tech["version"]:
-                        tech_name = f"{tech_name} {tech['version']}"
-                    return tech_name
-        
-        # If no priority tech found, use first detected
-        first_tech = detected_techs[0]
-        tech_name = tech_map.get(first_tech["name"], first_tech["name"].title())
-        if first_tech["version"]:
-            tech_name = f"{tech_name} {first_tech['version']}"
         return tech_name
     
     return "Unknown"
@@ -352,14 +585,30 @@ def diagnose_site(url):
                     print("[WARN] Page load timeout, attempting to get HTML...")
                     pass
 
-            # Get HTML content as early as possible for tech detection
+            # 1. Detect technologies via active Browser JS injection (Most accurate)
+            try:
+                browser_techs = detect_technologies_via_browser(page)
+                print(f"[INFO] Browser-detected technologies: {[t['name'] + (' ' + t['version'] if t['version'] else '') for t in browser_techs]}")
+            except Exception as e:
+                print(f"[WARN] Browser tech detection failed: {e}")
+                browser_techs = []
+
+            # 2. Get HTML content for static analysis and vulnerability scanning
             try:
                 html = page.content()
-                detected_techs = detect_technologies(html)
+                
+                # Detect technologies via static HTML analysis (Fallback)
+                static_techs = detect_technologies_static(html)
+                
+                # Merge results
+                detected_techs = merge_detected_techs(browser_techs, static_techs)
+                
                 if detected_techs:
-                    print(f"[INFO] Detected technologies: {[t['name'] for t in detected_techs[:3]]}")
+                    print(f"[INFO] Final detected technologies: {[t['name'] + (' ' + t['version'] if t['version'] else '') for t in detected_techs[:5]]}")
             except Exception as e:
                 print(f"[WARN] Could not get HTML content: {e}")
+                # Use whatever we got from browser
+                detected_techs = merge_detected_techs(browser_techs, [])
 
             # Wait a bit for performance entries to be available
             time.sleep(1)
@@ -424,6 +673,7 @@ def diagnose_site(url):
                                  key=lambda x: ('old' in x[0], x[0]))
             
             for tech, pattern in pattern_order:
+                # Use stricter regex finditer
                 matches = re.finditer(pattern, html_lower, re.IGNORECASE)
                 for match in matches:
                     # Extract version number from the match context
@@ -495,7 +745,8 @@ def diagnose_site(url):
             # Try to get HTML even on timeout for tech detection
             try:
                 html = page.content()
-                detected_techs = detect_technologies(html)
+                static_techs = detect_technologies_static(html)
+                detected_techs = merge_detected_techs([], static_techs)
                 if detected_techs:
                     print(f"[INFO] Detected technologies (timeout): {[t['name'] for t in detected_techs[:3]]}")
             except:
@@ -508,7 +759,8 @@ def diagnose_site(url):
             # Try to get HTML even on error for tech detection
             try:
                 html = page.content()
-                detected_techs = detect_technologies(html)
+                static_techs = detect_technologies_static(html)
+                detected_techs = merge_detected_techs([], static_techs)
             except:
                 pass
 
@@ -553,11 +805,11 @@ def generate_technical_observation(result):
         # Create the LLM
         llm = ChatGroq(
             groq_api_key=groq_api_key,
-            model_name="llama-3.1-70b-versatile",
+            model_name="llama-3.3-70b-versatile",
             temperature=0.3
         )
         
-        # Create the prompt template
+        # Create the prompt template with exact system prompt as specified
         prompt = ChatPromptTemplate.from_messages([
             ("system", """You are a Senior Technical Architect. You are analyzing a prospective client's website.
 

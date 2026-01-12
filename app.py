@@ -5,9 +5,11 @@ import os
 from diagnose_website import diagnose_site, generate_technical_observation, diagnose_multiple_sites
 from urllib.parse import urlparse
 from excel_export import export_single_result_to_excel, export_bulk_results_to_excel, export_company_list_to_excel
+from google_sheets_export import export_single_result_to_gsheet, export_bulk_results_to_gsheet, export_company_list_to_gsheet
 from csv_parser import validate_csv_file
 from werkzeug.utils import secure_filename
 from bulk_processor import bulk_processor
+from email_service import send_email
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS to allow requests from different ports/origins
@@ -268,7 +270,7 @@ def delete_result(filename):
 
 @app.route('/export/excel/<filename>', methods=['GET'])
 def export_result_to_excel(filename):
-    """Export a single diagnosis result to Excel format."""
+    """Export a single diagnosis result to Google Sheet."""
     try:
         # Security: prevent directory traversal
         if '..' in filename or '/' in filename or '\\' in filename:
@@ -283,31 +285,26 @@ def export_result_to_excel(filename):
         with open(json_filepath, 'r') as f:
             result_data = json.load(f)
         
-        # Export to Excel
-        excel_path = export_single_result_to_excel(result_data)
+        # Export to Google Sheet
+        try:
+            sheet_url = export_single_result_to_gsheet(result_data)
+        except FileNotFoundError:
+             return jsonify({'error': 'Google Sheets authentication failed: credentials.json not found on server.'}), 500
+        except Exception as e:
+             return jsonify({'error': f'Google Sheets API error: {str(e)}'}), 500
         
-        # Generate download filename
-        domain = result_data.get('domain', 'unknown')
-        safe_domain = domain.replace('.', '_').replace('/', '_')[:30]
-        download_filename = f"diagnosis_{safe_domain}.xlsx"
-        
-        return send_file(
-            excel_path,
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            as_attachment=True,
-            download_name=download_filename
-        )
+        return jsonify({'success': True, 'sheet_url': sheet_url})
     
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
-        print(f"Excel export error: {error_trace}")
-        return jsonify({'error': f'Excel export failed: {str(e)}'}), 500
+        print(f"Google Sheets export error: {error_trace}")
+        return jsonify({'error': f'Export failed: {str(e)}'}), 500
 
 
 @app.route('/export/excel/bulk', methods=['GET'])
 def export_all_results_to_excel():
-    """Export all saved diagnosis results to a single Excel file."""
+    """Export all saved diagnosis results to a single Google Sheet."""
     try:
         results_dir = 'results'
         os.makedirs(results_dir, exist_ok=True)
@@ -328,31 +325,26 @@ def export_all_results_to_excel():
         if not results_list:
             return jsonify({'error': 'No results found to export'}), 404
         
-        # Export to Excel
-        excel_path = export_bulk_results_to_excel(results_list)
+        # Export to Google Sheet
+        try:
+            sheet_url = export_bulk_results_to_gsheet(results_list)
+        except FileNotFoundError:
+             return jsonify({'error': 'Google Sheets authentication failed: credentials.json not found on server.'}), 500
+        except Exception as e:
+             return jsonify({'error': f'Google Sheets API error: {str(e)}'}), 500
         
-        # Generate download filename
-        from datetime import datetime
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        download_filename = f"bulk_diagnosis_results_{timestamp}.xlsx"
-        
-        return send_file(
-            excel_path,
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            as_attachment=True,
-            download_name=download_filename
-        )
+        return jsonify({'success': True, 'sheet_url': sheet_url})
     
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
-        print(f"Bulk Excel export error: {error_trace}")
-        return jsonify({'error': f'Bulk Excel export failed: {str(e)}'}), 500
+        print(f"Bulk export error: {error_trace}")
+        return jsonify({'error': f'Bulk export failed: {str(e)}'}), 500
 
 
 @app.route('/download-excel/all', methods=['GET'])
 def download_full_company_list():
-    """Export all company diagnosis results to Excel with complete details."""
+    """Export all company diagnosis results to Google Sheet with complete details."""
     try:
         results_dir = 'results'
         os.makedirs(results_dir, exist_ok=True)
@@ -376,31 +368,26 @@ def download_full_company_list():
         if not results_list:
             return jsonify({'error': 'No results found to export'}), 404
         
-        # Export to Excel using the new function
-        excel_path = export_company_list_to_excel(results_list)
-        
-        # Generate download filename with proper naming convention
-        from datetime import datetime
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        download_filename = f"company_diagnosis_export_{timestamp}.xlsx"
-        
-        return send_file(
-            excel_path,
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            as_attachment=True,
-            download_name=download_filename
-        )
+        # Export to Google Sheet
+        try:
+            sheet_url = export_company_list_to_gsheet(results_list)
+        except FileNotFoundError:
+             return jsonify({'error': 'Google Sheets authentication failed: credentials.json not found on server.'}), 500
+        except Exception as e:
+             return jsonify({'error': f'Google Sheets API error: {str(e)}'}), 500
+             
+        return jsonify({'success': True, 'sheet_url': sheet_url})
     
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
         print(f"Full company list export error: {error_trace}")
-        return jsonify({'error': f'Excel export failed: {str(e)}'}), 500
+        return jsonify({'error': f'Export failed: {str(e)}'}), 500
 
 
 @app.route('/download-excel/filtered', methods=['POST'])
 def download_filtered_company_list():
-    """Export filtered company diagnosis results to Excel with complete details."""
+    """Export filtered company diagnosis results to Google Sheet with complete details."""
     try:
         data = request.get_json() or {}
         
@@ -463,26 +450,21 @@ def download_filtered_company_list():
         if not filtered_results:
             return jsonify({'error': 'No results match the current filters'}), 404
         
-        # Export to Excel using the company list export function
-        excel_path = export_company_list_to_excel(filtered_results)
-        
-        # Generate download filename with proper naming convention
-        from datetime import datetime
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        download_filename = f"company_diagnosis_filtered_{timestamp}.xlsx"
-        
-        return send_file(
-            excel_path,
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            as_attachment=True,
-            download_name=download_filename
-        )
+        # Export to Google Sheet
+        try:
+            sheet_url = export_company_list_to_gsheet(filtered_results)
+        except FileNotFoundError:
+             return jsonify({'error': 'Google Sheets authentication failed: credentials.json not found on server.'}), 500
+        except Exception as e:
+             return jsonify({'error': f'Google Sheets API error: {str(e)}'}), 500
+             
+        return jsonify({'success': True, 'sheet_url': sheet_url})
     
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
         print(f"Filtered company list export error: {error_trace}")
-        return jsonify({'error': f'Excel export failed: {str(e)}'}), 500
+        return jsonify({'error': f'Export failed: {str(e)}'}), 500
 
 
 @app.route('/upload-csv', methods=['POST'])
@@ -599,6 +581,51 @@ def get_bulk_status(job_id):
     
     except Exception as e:
         return jsonify({'error': f'Failed to get job status: {str(e)}'}), 500
+@app.route('/api/send-email', methods=['POST'])
+def send_personalized_email():
+    """Send a personalized email using the "Sniper" template."""
+    try:
+        data = request.get_json()
+        
+        # Required fields
+        recipient_email = data.get('recipient_email')
+        name = data.get('name', 'there')
+        domain = data.get('domain')
+        industry = data.get('industry', 'your')
+        console_errors = data.get('console_errors', '0')
+        load_time = data.get('load_time', 'N/A')
+        signature = data.get('signature', 'The Team')
+        
+        if not recipient_email or not domain:
+            return jsonify({'error': 'recipient_email and domain are required'}), 400
+            
+        # Format the template
+        subject = f"Technical debt on {domain} (AngularJS 1.x)"
+        body = f"""Hi {name},
+
+My automated scanner flagged {domain} while analyzing legacy frameworks in the {industry} sector.
+
+It looks like you're still running AngularJS 1.5 in production. We also caught [{console_errors}] console errors on the homepage that are likely impacting your load times ([{load_time}]).
+
+I’m not trying to sell you a new website. But if you need a specialized team to handle the migration to React/Vue without breaking your database connections, that is exactly what we do.
+
+Open to a 10-min technical audit?
+
+{signature}"""
+
+        # Send the email
+        send_email(recipient_email, subject, body)
+        
+        return jsonify({'success': True, 'message': 'Email sent successfully'})
+        
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Send email error: {error_trace}")
+        return jsonify({
+            'error': f'Failed to send email: {str(e)}',
+            'details': error_trace if os.environ.get('FLASK_DEBUG') else None
+        }), 500
 
 
 if __name__ == '__main__':
